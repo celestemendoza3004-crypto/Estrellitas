@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Banco de Estrellitas ⭐</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#121a33; --text:#eef2ff; --muted:#a8b0d6; --accent:#7c3aed;
+      --good:#22c55e; --bad:#ef4444; --line:rgba(255,255,255,.10);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 500px at 20% 0%, rgba(124,58,237,.25), transparent 60%),
+                  radial-gradient(1000px 500px at 90% 10%, rgba(34,197,94,.18), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    .wrap{max-width:980px; margin:0 auto; padding:24px;}
+    header{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px;}
+    h1{margin:0; font-size:24px; letter-spacing:.2px}
+    .sub{color:var(--muted); font-size:13px; margin-top:6px; line-height:1.4}
+
+    .grid{display:grid; grid-template-columns: 1.1fr .9fr; gap:16px;}
+    @media (max-width: 860px){ .grid{grid-template-columns:1fr;} }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      padding:16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.25);
+    }
+
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    label{font-size:12px; color:var(--muted)}
+    select, input, button{
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding: 10px 12px;
+      outline:none;
+    }
+    input::placeholder{color:rgba(238,242,255,.45)}
+    button{
+      cursor:pointer;
+      background: rgba(124,58,237,.22);
+      border-color: rgba(124,58,237,.35);
+      transition: transform .05s ease, background .15s ease;
+    }
+    button:active{transform: scale(.98)}
+    .btn-good{background: rgba(34,197,94,.18); border-color: rgba(34,197,94,.35)}
+    .btn-bad{background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.35)}
+    .btn-ghost{background: rgba(255,255,255,.04)}
+
+    .balances{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;}
+    @media (max-width: 460px){ .balances{grid-template-columns:1fr;} }
+    .pill{
+      border:1px dashed var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,.03);
+    }
+    .pill h2{margin:0; font-size:14px; color:var(--muted); font-weight:600}
+    .amount{font-size:32px; margin-top:6px; letter-spacing:.5px}
+
+    .section-title{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;}
+    .section-title h3{margin:0; font-size:14px; color:var(--muted); font-weight:600}
+
+    .list{display:flex; flex-direction:column; gap:8px;}
+    .item{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.03);
+    }
+    .item .left{display:flex; flex-direction:column; gap:3px}
+    .item .name{font-weight:600}
+    .item .meta{font-size:12px; color:var(--muted)}
+    .item .right{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
+
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+    .hr{height:1px; background:var(--line); margin:14px 0;}
+
+    .toast{position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+      padding:10px 12px; border-radius: 12px; border:1px solid var(--line);
+      background: rgba(18,26,51,.92); color:var(--text); opacity:0; pointer-events:none;
+      transition: opacity .2s ease;
+    }
+    .toast.show{opacity:1}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Banco de Estrellitas ⭐</h1>
+        <div class="sub">Una app simple para que vos y tu pareja acumulen y gasten “estrellitas” como moneda de juego.
+          <br>Todo se guarda en este dispositivo (localStorage). Si quieren usarlo en dos celulares, compartan el mismo archivo y configuren igual.
+        </div>
+      </div>
+      <button class="btn-ghost" id="resetBtn" title="Borra todos los datos">Reiniciar</button>
+    </header>
+
+    <div class="grid">
+      <!-- Columna izquierda: saldo + movimientos -->
+      <section class="card">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <label>Persona</label><br>
+            <select id="personSelect"></select>
+          </div>
+          <div>
+            <label>Nombre 1</label><br>
+            <input id="nameA" placeholder="Ej: Nico" style="width:140px" />
+          </div>
+          <div>
+            <label>Nombre 2</label><br>
+            <input id="nameB" placeholder="Ej: Celes" style="width:140px" />
+          </div>
+          <button id="saveNames" class="btn-ghost">Guardar nombres</button>
+        </div>
+
+        <div class="balances">
+          <div class="pill">
+            <h2 id="labelA">Persona 1</h2>
+            <div class="amount" id="balA">0 ⭐</div>
+          </div>
+          <div class="pill">
+            <h2 id="labelB">Persona 2</h2>
+            <div class="amount" id="balB">0 ⭐</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row">
+          <div>
+            <label>Cantidad</label><br>
+            <input id="amt" type="number" min="1" step="1" value="1" style="width:110px" />
+          </div>
+          <div style="flex:1; min-width:220px;">
+            <label>Motivo (opcional)</label><br>
+            <input id="note" placeholder="Ej: lavó los platos / salida / detalle" style="width:100%" />
+          </div>
+          <button id="addBtn" class="btn-good">Sumar ⭐</button>
+          <button id="subBtn" class="btn-bad">Gastar ⭐</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="section-title">
+          <h3>Historial</h3>
+          <div class="small muted" id="histHint">Últimos movimientos</div>
+        </div>
+        <div id="history" class="list"></div>
+      </section>
+
+      <!-- Columna derecha: recompensas -->
+      <aside class="card">
+        <div class="section-title">
+          <h3>Recompensas</h3>
+          <div class="small muted">Definan sus premios</div>
+        </div>
+
+        <div class="row">
+          <div style="flex:1; min-width:180px;">
+            <label>Nombre</label><br>
+            <input id="rewardName" placeholder="Ej: Elegir peli" style="width:100%" />
+          </div>
+          <div>
+            <label>Costo</label><br>
+            <input id="rewardCost" type="number" min="1" step="1" value="5" style="width:110px" />
+          </div>
+          <button id="addReward" class="btn-ghost">Agregar</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div id="rewards" class="list"></div>
+
+        <div class="hr"></div>
+        <div class="small muted">
+          Tip: apretá <b>Canjear</b> para descontar automáticamente del saldo de la persona seleccionada.
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+(function(){
+  const KEY = 'estrellitas_app_v1';
+
+  const $ = (id) => document.getElementById(id);
+
+  const defaultState = {
+    names: { a: 'Persona 1', b: 'Persona 2' },
+    balances: { a: 0, b: 0 },
+    rewards: [
+      { id: cryptoRandom(), name: 'Elegir peli', cost: 5 },
+      { id: cryptoRandom(), name: 'Mate/Chocolate en la cama', cost: 8 },
+      { id: cryptoRandom(), name: 'Masaje 15 min', cost: 12 },
+    ],
+    history: [] // {ts, person:'a'|'b', delta:+/-n, note, kind:'manual'|'redeem', rewardName?}
+  };
+
+  function cryptoRandom(){
+    // id corto
+    return Math.random().toString(16).slice(2) + Date.now().toString(16);
+  }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      if(!raw) return structuredClone(defaultState);
+      const data = JSON.parse(raw);
+      // tolerancia por si faltan campos
+      return {
+        ...structuredClone(defaultState),
+        ...data,
+        names: { ...defaultState.names, ...(data.names||{}) },
+        balances: { ...defaultState.balances, ...(data.balances||{}) },
+        rewards: Array.isArray(data.rewards) && data.rewards.length ? data.rewards : defaultState.rewards,
+        history: Array.isArray(data.history) ? data.history : []
+      };
+    }catch(e){
+      return structuredClone(defaultState);
+    }
+  }
+
+  function save(){
+    localStorage.setItem(KEY, JSON.stringify(state));
+  }
+
+  function toast(msg){
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 1600);
+  }
+
+  function fmtStars(n){
+    return `${n} ⭐`;
+  }
+
+  function fmtTime(ts){
+    const d = new Date(ts);
+    return d.toLocaleString(undefined, { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit' });
+  }
+
+  function personLabel(p){
+    return p==='a' ? state.names.a : state.names.b;
+  }
+
+  function renderPersonSelect(){
+    const sel = $('personSelect');
+    const val = sel.value || 'a';
+    sel.innerHTML = '';
+    const optA = document.createElement('option');
+    optA.value = 'a'; optA.textContent = state.names.a;
+    const optB = document.createElement('option');
+    optB.value = 'b'; optB.textContent = state.names.b;
+    sel.append(optA,optB);
+    sel.value = (val==='b') ? 'b' : 'a';
+  }
+
+  function renderBalances(){
+    $('labelA').textContent = state.names.a;
+    $('labelB').textContent = state.names.b;
+    $('balA').textContent = fmtStars(state.balances.a);
+    $('balB').textContent = fmtStars(state.balances.b);
+  }
+
+  function renderHistory(){
+    const box = $('history');
+    box.innerHTML = '';
+    const items = state.history.slice(0, 12);
+    if(items.length === 0){
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `<div class="left"><div class="name">Sin movimientos aún</div><div class="meta">Sumá o gastá estrellitas para empezar</div></div>`;
+      box.append(div);
+      return;
+    }
+
+    for(const h of items){
+      const div = document.createElement('div');
+      div.className = 'item';
+      const sign = h.delta >= 0 ? '+' : '';
+      const kind = h.kind === 'redeem' ? 'Canje' : 'Movimiento';
+      const note = h.rewardName ? `• ${h.rewardName}` : (h.note ? `• ${escapeHtml(h.note)}` : '');
+      div.innerHTML = `
+        <div class="left">
+          <div class="name">${escapeHtml(personLabel(h.person))} — ${kind}</div>
+          <div class="meta">${fmtTime(h.ts)} ${note}</div>
+        </div>
+        <div class="right">
+          <div style="font-weight:700;">${sign}${h.delta} ⭐</div>
+          <button class="btn-ghost" data-del="${h.ts}">Borrar</button>
+        </div>
+      `;
+      box.append(div);
+    }
+
+    box.querySelectorAll('button[data-del]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const ts = Number(btn.getAttribute('data-del'));
+        const idx = state.history.findIndex(x=>x.ts===ts);
+        if(idx>=0){
+          // revertimos el movimiento
+          const h = state.history[idx];
+          state.balances[h.person] -= h.delta;
+          state.history.splice(idx,1);
+          save();
+          rerender();
+          toast('Movimiento borrado');
+        }
+      });
+    });
+  }
+
+  function renderRewards(){
+    const box = $('rewards');
+    box.innerHTML = '';
+
+    for(const r of state.rewards){
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <div class="left">
+          <div class="name">${escapeHtml(r.name)}</div>
+          <div class="meta">Costo: ${r.cost} ⭐</div>
+        </div>
+        <div class="right">
+          <button class="btn-good" data-redeem="${r.id}">Canjear</button>
+          <button class="btn-ghost" data-edit="${r.id}">Editar</button>
+          <button class="btn-bad" data-remove="${r.id}">Quitar</button>
+        </div>
+      `;
+      box.append(div);
+    }
+
+    box.querySelectorAll('button[data-redeem]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.getAttribute('data-redeem');
+        const r = state.rewards.find(x=>x.id===id);
+        if(!r) return;
+        const p = $('personSelect').value;
+        if(state.balances[p] < r.cost){
+          toast('No alcanza el saldo 😅');
+          return;
+        }
+        state.balances[p] -= r.cost;
+        state.history.unshift({ ts: Date.now(), person: p, delta: -r.cost, kind:'redeem', rewardName: r.name });
+        save();
+        rerender();
+        toast('Canje realizado');
+      });
+    });
+
+    box.querySelectorAll('button[data-remove]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.getAttribute('data-remove');
+        state.rewards = state.rewards.filter(x=>x.id!==id);
+        save();
+        rerender();
+        toast('Recompensa quitada');
+      });
+    });
+
+    box.querySelectorAll('button[data-edit]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.getAttribute('data-edit');
+        const r = state.rewards.find(x=>x.id===id);
+        if(!r) return;
+        const newName = prompt('Nombre de la recompensa:', r.name);
+        if(newName===null) return;
+        const newCostStr = prompt('Costo en estrellitas:', String(r.cost));
+        if(newCostStr===null) return;
+        const newCost = Number(newCostStr);
+        if(!newName.trim() || !Number.isFinite(newCost) || newCost<=0){
+          toast('Datos inválidos');
+          return;
+        }
+        r.name = newName.trim();
+        r.cost = Math.round(newCost);
+        save();
+        rerender();
+        toast('Recompensa actualizada');
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'",'&#39;');
+  }
+
+  function addMovement(delta){
+    const p = $('personSelect').value;
+    const amt = Math.round(Number($('amt').value));
+    if(!Number.isFinite(amt) || amt <= 0){
+      toast('Cantidad inválida');
+      return;
+    }
+    const note = $('note').value.trim();
+
+    if(delta < 0 && state.balances[p] < amt){
+      toast('No alcanza el saldo');
+      return;
+    }
+
+    state.balances[p] += (delta>0 ? amt : -amt);
+    state.history.unshift({ ts: Date.now(), person: p, delta: (delta>0 ? amt : -amt), note, kind:'manual' });
+    $('note').value = '';
+    save();
+    rerender();
+    toast(delta>0 ? 'Sumado' : 'Gastado');
+  }
+
+  function rerender(){
+    renderPersonSelect();
+    renderBalances();
+    renderRewards();
+    renderHistory();
+    $('nameA').value = state.names.a;
+    $('nameB').value = state.names.b;
+  }
+
+  let state = load();
+
+  // Wire
+  $('addBtn').addEventListener('click', ()=> addMovement(+1));
+  $('subBtn').addEventListener('click', ()=> addMovement(-1));
+
+  $('saveNames').addEventListener('click', ()=>{
+    const a = $('nameA').value.trim() || 'Persona 1';
+    const b = $('nameB').value.trim() || 'Persona 2';
+    state.names.a = a;
+    state.names.b = b;
+    save();
+    rerender();
+    toast('Nombres guardados');
+  });
+
+  $('addReward').addEventListener('click', ()=>{
+    const name = $('rewardName').value.trim();
+    const cost = Math.round(Number($('rewardCost').value));
+    if(!name || !Number.isFinite(cost) || cost<=0){
+      toast('Completá nombre y costo');
+      return;
+    }
+    state.rewards.unshift({ id: cryptoRandom(), name, cost });
+    $('rewardName').value = '';
+    save();
+    rerender();
+    toast('Recompensa agregada');
+  });
+
+  $('resetBtn').addEventListener('click', ()=>{
+    if(!confirm('¿Seguro que querés reiniciar? Se borra saldo, historial y recompensas.')) return;
+    state = structuredClone(defaultState);
+    save();
+    rerender();
+    toast('Reiniciado');
+  });
+
+  rerender();
+})();
+</script>
+</body>
+</html>
